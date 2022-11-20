@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "../../01.Asynchronous Programming - Exercise"
+		},
+		{
+			"path": "../../02.Data and Authentication - Exercise"
+		},
+		{
+			"path": "../../03.Single Page Applications - Exercise"
+		},
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "04.Architecture and Testing - Exercise"
+	}
+}
