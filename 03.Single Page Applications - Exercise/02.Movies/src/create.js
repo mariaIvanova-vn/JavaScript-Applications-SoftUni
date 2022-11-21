@@ -1,37 +1,50 @@
-import { homePage } from './home.js';
-import { showView } from './util.js';
+import { showHome } from "./app.js";
+import { showSection } from "./dom.js";
 
+const sections = document.querySelectorAll('.view-section');
+const form = document.querySelector('#add-movie-form');
+form.addEventListener('submit', addMovie);
 
-const section = document.querySelector('#add-movie');
-const form = section.querySelector('form');
-form.addEventListener('submit', onSubmit);
-
-export function createPage() {
-    showView(section);
+export function showCreateMovie() {
+    showSection(sections[1]);
 }
 
-async function onSubmit(event) {
-    event.preventDefault();
-    const formData = new FormData(form);
+async function addMovie(e) {
+    e.preventDefault();
 
-    const title = formData.get('title');
-    const description = formData.get('description');
-    const img = formData.get('imageUrl');
+    const data = new FormData(e.target);
+    const title = data.get('title');
+    const description = data.get('description');
+    const img = data.get('img');
 
-    await createMovie(title, description, img);
-    form.reset();
-    homePage();
-}
+    if (title === '' || description === '' || img === '') {
+        alert('All fields are required');
+        return;
+    }
 
-async function createMovie(title, description, img) {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const token = sessionStorage.getItem('accessToken');
 
-    await fetch('http://localhost:3030/data/movies', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Authorization': user.accessToken
-        },
-        body: JSON.stringify({ title, description, img })
-    });
+    try {
+        const response = await fetch('http://localhost:3030/data/movies', {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+                'X-Authorization': token
+            },
+            body: JSON.stringify({
+                title,
+                description,
+                img
+            })
+        });
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message);
+        }
+        showHome();
+        form.reset();
+
+    } catch (error) {
+        alert(error.message);
+    }
 }

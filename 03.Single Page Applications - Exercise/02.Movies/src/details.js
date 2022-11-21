@@ -1,109 +1,83 @@
-import { showView, spinner } from './util.js';
+import { htmlGenerator, showSection } from "./dom.js";
+import { deleteMovie } from "./delete.js";
+import { showEdit } from "./edit.js";
+import { likeMovie, dislikeMovie, counterLikes, isMovieLiked } from "./likes.js";
 
+const sections = document.querySelectorAll('.view-section');
 
-const section = document.querySelector('#movie-example');
-
-export function detailsPage(id) {
-    showView(section);
-    displayMovie(id);
+export function showDetails(id) {
+    showSection(sections[2]);
+    movieDetails(id);
 }
 
-async function displayMovie(id) {
-    section.replaceChildren(spinner());
+export async function movieDetails(id) {
+    const userId = sessionStorage.getItem('userId');
+    const token = sessionStorage.getItem('accessToken');
 
-    const user = JSON.parse(localStorage.getItem('user'));
+    try {
+        const response = await fetch(`http://localhost:3030/data/movies/${id}`);
+        const data = await response.json();
+        const isLiked = await isMovieLiked(id, userId);
+        const totalLikes = await counterLikes(data._id);
 
-    const [movie, likes, ownLike] = await Promise.all([
-        getMovie(id),
-        getLikes(id),
-        getOwnLike(id, user)
-    ]);
+        if (!response.ok) {
+            throw new Error(response.message);
+        }
+        sections[2].replaceChildren();
 
-    section.replaceChildren(createMovieCard(movie, user, likes, ownLike));
-}
+        const divContainer = htmlGenerator('div', '', 'container', sections[2]);
+        const divRow = htmlGenerator('div', '', 'row bg-light text-dark', divContainer);
 
-function createMovieCard(movie, user, likes, ownLike) {
-    const element = document.createElement('div');
-    element.className = 'container';
-    element.innerHTML = `
-    <div class="row bg-light text-dark">
-        <h1>Movie title: ${movie.title}</h1>
-        <div class="col-md-8">
-            <img class="img-thumbnail" src="${movie.img}" alt="Movie">
-        </div>
-        <div class="col-md-4 text-center">
-            <h3 class="my-3 ">Movie Description</h3>
-            <p>${movie.description}</p>
-            ${createControls(movie, user, ownLike)}
-            <span class="enrolled-span">Liked ${likes}</span>
-        </div>
-    </div>`;
+        htmlGenerator('h1', `Movie title: ${data.title}`, '', divRow);
+        const divCol = htmlGenerator('div', '', 'col-md-8', divRow);
+        const img = htmlGenerator('img', '', 'img-thumbnail', divCol);
+        img.setAttribute('src', data.img);
+        img.alt = 'Movie';
 
-    const likeBtn = element.querySelector('.like-btn');
-    if (likeBtn) {
-        likeBtn.addEventListener('click', (e) => likeMovie(e, movie._id));
+        const divCol4 = htmlGenerator('div', '', 'col-md-4 text-center', divRow);
+        htmlGenerator('h3', 'Movie Description', 'my-3', divCol4);
+        htmlGenerator('p', data.description, '', divCol4);
+
+        const anchorDelete = htmlGenerator('a', 'Delete', 'btn btn-danger', divCol4);
+        anchorDelete.setAttribute('href', '#');
+        anchorDelete.setAttribute('id', id);
+        anchorDelete.addEventListener('click', deleteMovie);
+        anchorDelete.style.visibility = 'hidden';
+
+        const anchorEdit = htmlGenerator('a', 'Edit', 'btn btn-warning', divCol4);
+        anchorEdit.setAttribute('href', '#');
+        anchorEdit.setAttribute('id', id);
+        anchorEdit.addEventListener('click', () => showEdit(data));
+        anchorEdit.style.visibility = 'hidden';
+
+        const likeBtn = htmlGenerator('a', '', '', divCol4);
+        likeBtn.setAttribute('href', '#');
+        likeBtn.style.visibility = 'hidden';
+
+        htmlGenerator('span', `Liked ${totalLikes}`, 'enrolled-span', divCol4);
+        
+        if (userId !== null && data._ownerId === userId) {
+            anchorDelete.style.visibility = 'visible';
+            anchorEdit.style.visibility = 'visible';
+        }
+
+        if (userId !== null && data._ownerId !== userId) {
+            if (isLiked.length > 0) {
+                likeBtn.textContent = 'Dislike';
+                likeBtn.className = 'btn btn-danger';
+                likeBtn.addEventListener('click', async () => dislikeMovie(data._id, isLiked[0]._id));
+
+            } else {
+                likeBtn.textContent = 'Like';
+                likeBtn.className = 'btn btn-primary';
+                likeBtn.addEventListener('click', () => likeMovie(data._id));
+            }
+
+            likeBtn.style.visibility = 'visible';
+        }
+
+
+    } catch (error) {
+        alert(error.message);
     }
-
-    return element;
-}
-
-function createControls(movie, user, ownLike) {
-    const isOwner = user && user._id == movie._ownerId;
-
-    let controls = [];
-
-    if (isOwner) {
-        controls.push('<a class="btn btn-danger" href="#">Delete</a>');
-        controls.push('<a class="btn btn-warning" href="#">Edit</a>');
-    } else if (user && ownLike == false) {
-        controls.push('<a class="btn btn-primary like-btn" href="#">Like</a>');
-    }
-    controls.push();
-
-    return controls.join('');
-}
-
-async function getMovie(id) {
-    const res = await fetch(`http://localhost:3030/data/movies/${id}`);
-    const movie = await res.json();
-
-    return movie;
-}
-
-async function getLikes(id) {
-    const res = await fetch(`http://localhost:3030/data/likes?where=movieId%3D%22${id}%22&distinct=_ownerId&count`);
-    const likes = await res.json();
-
-    return likes;
-}
-
-async function getOwnLike(movieId, user) {
-    if (!user) {
-        return false;
-    } else {
-        const userId = user._id;
-        const res = await fetch(`http://localhost:3030/data/likes?where=movieId%3D%22${movieId}%22%20and%20_ownerId%3D%22${userId}%22`);
-        const like = await res.json();
-
-        return like.length > 0;
-    }
-}
-
-async function likeMovie(e, movieId) {
-    e.preventDefault();
-
-    const user = JSON.parse(localStorage.getItem('user'));
-
-    await fetch('http://localhost:3030/data/likes', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Authorization': user.accessToken
-        },
-        body: JSON.stringify({
-            movieId
-        })
-    });
-
-    detailsPage(movieId);
 }

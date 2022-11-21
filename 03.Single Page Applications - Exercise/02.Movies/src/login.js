@@ -1,45 +1,53 @@
-import { homePage } from './home.js';
-import { showView, updateNav } from './util.js';
+import { showSection } from "./dom.js";
+import { showHome } from "./app.js";
 
-const section = document.querySelector('#form-login');
-const form = section.querySelector('form');
-form.addEventListener('submit', onSubmit);
+const sections = document.querySelectorAll('.view-section');
+const loginForm = document.querySelector('#login-form');
 
-export function loginPage() {
-    showView(section);
+export function showLogin() {
+    showSection(sections[4]);
+    loginForm.addEventListener('submit', loginUser);
 }
 
-async function onSubmit(event) {
-    event.preventDefault();
-    const formData = new FormData(form);
+async function loginUser(e) {
+    e.preventDefault();
 
+    const formData = new FormData(e.target);
     const email = formData.get('email');
     const password = formData.get('password');
 
-    await login(email, password);
-    form.reset();
-    updateNav();
-    homePage();
-}
+    if (email === '' || password === '') {
+        alert('All fields are required!');
+        return;
+    }
 
-async function login(email, password) {
     try {
-        const res = await fetch('http://localhost:3030/users/login', {
+        const response = await fetch('http://localhost:3030/users/login', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'content-type': 'application/json'
             },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({
+                email,
+                password
+            })
         });
-        if (!res.ok) {
-            const error = await res.json();
-            throw new Error(error.message);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            alert('Invalid credentials!');
+            loginForm.reset();
+            return;
         }
 
-        const user = await res.json();
-        localStorage.setItem('user', JSON.stringify(user));
-    } catch (err) {
-        alert(err.message);
-        throw err;
+        sessionStorage.setItem('accessToken', data.accessToken);
+        sessionStorage.setItem('userId', data._id);
+        sessionStorage.setItem('userEmail', data.email);
+
+        showHome();
+        loginForm.reset();
+
+    } catch (error) {
+        alert(error.message);
     }
 }
