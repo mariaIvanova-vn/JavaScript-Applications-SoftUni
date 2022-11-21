@@ -1,5 +1,8 @@
 import page from '../node_modules/page/page.mjs';
-import  {} from "../node_modules/lit-html/lit-html.js";
+import  {html, render} from "../node_modules/lit-html/lit-html.js";
+import { loginView } from './views/login.js';
+
+page('/login', loginView)
 
 export const updateInfo = () =>{
     let userDiv = document.getElementById('user');
@@ -15,3 +18,5 @@ export const updateInfo = () =>{
 }
 
 updateInfo();
+
+page.start()
