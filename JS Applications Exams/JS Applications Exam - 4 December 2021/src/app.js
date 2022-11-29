@@ -25,7 +25,7 @@ page('/catalog', showCatalog);
 page('/create',showCreate);
 page('/details/:id', showDetails);
 page('/edit/:id', showEdit);
-page('/search',showSearch);
+page('/search', showSearch);
 
 
 

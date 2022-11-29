@@ -16,6 +16,6 @@ export async function editAlbum(id, data){
     return put('/data/albums/' + id, data);
 }
 
-export async function getSearchAlbum(){
-    return get('/data/albums?where=name%20LIKE%20%22${query}%22');
+export async function getSearchAlbum(query){
+    return get(`/data/albums?where=name%20LIKE%20%22${query}%22`);
 }
