@@ -15,3 +15,4 @@ export async function createOffer(data){
 export async function editItem(id, data){
     return put('/data/offers/' + id, data);
 }
+
